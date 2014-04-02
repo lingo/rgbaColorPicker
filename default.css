@@ -1,11 +1,11 @@
 .rgbapicker_container
 {
-	display:  inline 0 block;
+	display:    inline 0 block;
 	box-shadow: 5px 5px 25px 0px rgba(0, 0, 0, .3);
-	height:   380px;
-	position: relative;
-	width:    222px;
-	z-index:  9001;
+	position:   relative;
+	width:      383px;
+	height:     229px;
+	z-index:    9001;
 }
 
 .rgbapicker_container {
@@ -23,11 +23,11 @@
 	box-shadow:     5px 5px 19px 0 rgba(0,0,0,.1);
 	display:        inline 0 block;
 	float:          left;
+	width:          383px;
 	height:         229px;
 	overflow:       hidden;
 	padding:        3px;
 	vertical-align: top;
-	width:          383px;
 }
 .rgbapicker.left {
 	float: right;

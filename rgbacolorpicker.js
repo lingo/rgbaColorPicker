@@ -15,10 +15,10 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
             + '<div class="rgbapicker">'
                 + '<div class="selectedcolorconainer" ><div class="selectedcolor" ></div></div>'
                 + '<input type="text" name="" class="actualcolor" value="">'
-                + '<input type="hidden" class="color r" value="" />'
-                + '<input type="hidden" class="color g" value="" />'
-                + '<input type="hidden" class="color b" value="" />'
-                + '<input type="hidden" class="color a" value="" />'
+                + '<input type="hidden" class="color r" value="0" />'
+                + '<input type="hidden" class="color g" value="0" />'
+                + '<input type="hidden" class="color b" value="0" />'
+                + '<input type="hidden" class="color a" value="0" />'
                 + '<div class="colorselect"><div class="colorhighlight"></div></div>'
                 + '<div class="grayselect"><div class="grayhighlight"></div></div>'
                 + '<div class="alphaselect"><div class="alphahighlight"></div></div>'
@@ -123,7 +123,7 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
 
     RGBA.prototype.getColor = function() {
         this.update_color();
-        return this.picker.find('.actualcolor').val(f);
+        return this.picker.find('.actualcolor').val();
     };
 
     RGBA.prototype.setColor = function(clr) {
@@ -144,7 +144,7 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
         var colorSelectMouseMove = function(e) {
             if (!T._dragging) {
                 return;
-            }            
+            }
             var $this = $(this);
             var xy    = get_xy($this, e);
             if ((xy.relative.x >= 0) && (xy.relative.x < 360) && (xy.relative.y >= 0) && (xy.relative.y < 180)) {
@@ -209,7 +209,7 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
                 'top': 0
             });
             $this.parent().find('.colorhighlight').hide();
-            T._dragging = true;            
+            T._dragging = true;
         });
         graySelect.on('mousemove', graySelectMouseMove);
         graySelect.on('mouseup', unbindMM);
@@ -236,7 +236,7 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
             var a = get_alpha(xy)
             T.update_color(undefined, undefined, undefined, a)
             $this.find('.alphahighlight').show().css('left', 0).css('top', xy.relative.y)
-            T._dragging = true;            
+            T._dragging = true;
         });
         alphaSelect.on('mousemove', alphaSelectMouseMove);
         alphaSelect.on('mouseup', unbindMM);
@@ -275,17 +275,33 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
             this.color.a = 1;
         }
         this.update_color();
-        
+
         var T = this;
         this.element.on('click', function(e) {
             var $this = $(this);
-            var off   = $this.offset();
+
             T.picker.data('ColorPickerInstance', T);
+
+            var off   = $this.offset();
+            var dim   = [$this.width(), $this.height()];
+
+            var x = off.left - T.picker.width() - 10;
+            if (x < 10) {
+                x = 10;
+            }
+            var y = off.top + dim[1];
+            if (y < 10) {
+                y = 10;
+            }
+            if (y + T.picker.height() >= $(window).height()) {
+                y = $(window).height() - 10 - T.picker.height();
+            }
             T.picker.css({
                 position: 'absolute',
-                left:     off.left - T.picker.width(),
-                top:      off.top
+                left:     x,
+                top:      y
             });
+            T.update_color(T.color.r, T.color.g, T.color.b, T.color.a);
             T.show();
             e.preventDefault();
             return false;
@@ -306,68 +322,99 @@ define(['jquery', 'tinycolor', 'text!../lib/rgbaColorPicker/default.css'], funct
     }
 
 
+    function setIf(value, defaultVal) {
+        if (typeof value === undefined || value === undefined) {
+            return defaultVal;
+        }
+        return value;
+    }
 
     RGBA.prototype.update_color = function(r, g, b, a) {
         var colors = this.picker.find('.color');
-        r = r || colors.siblings('.r').val();
-        g = g || colors.siblings('.g').val();
-        b = b || colors.siblings('.b').val();
-        a = a || colors.siblings('.a').val();
+        r = setIf(r, colors.siblings('.r').val());
+        g = setIf(g, colors.siblings('.g').val());
+        b = setIf(b, colors.siblings('.b').val());
+        a = setIf(a, colors.siblings('.a').val());
         colors.siblings('.r').val(r);
         colors.siblings('.g').val(g);
         colors.siblings('.b').val(b);
         colors.siblings('.a').val(a);
         var c = 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
-        var f;
         var pickerInstance = this.picker.data('ColorPickerInstance');
         if (!pickerInstance) {
             console.warn("update_color: Failed to find instance bound to picker");
             pickerInstance = this;
         }
+        var f = 'transparent';
+        // Calculate color name/string
         if (pickerInstance.opt.force_rgba) {
             f = c;
         } else {
-            var hsl = tinycolor(c).toHsl();
-            console.log(hsl);
-            if (hsl.s != 0) {
-                this.picker.find('.colorhighlight').css({
-                    left:    hsl.h,// * 360,
-                    top:     Math.abs((hsl.l * 180) - 180),
-                }).show();
-                this.picker.find('.grayhighlight').css('display', 'none');
-            } else if(hsl.s==0) {
-                this.picker.find('.grayhighlight').css({
-                    left:    hsl.l * 360,
-                    top:     0,
-                    display: 'block'
-                });
-                this.picker.find('.colorhighlight').hide();
-                console.log('hid colorhighlight', hsl);
-            }
-            this.picker.find('.alphahighlight').css({
-                left:    0,
-                top:     Math.abs((hsl.a * 180) - 180),
-                display: 'block'
-            });
-            f = 'transparent';
-            if (a == 1) {
+            if (a === 1) {
                 if (tinycolor(c).toName()) {
                     f = tinycolor(c).toName();
                 } else {
                     f = tinycolor(c).toHexString();
                 }
-            } else if (a == 0) {
-                f = 'transparent'
             } else {
                 f = tinycolor(c).toRgbString();
             }
-            this.picker.find('.actualcolor').val(f);
-            this.picker.find('.selectedcolor').css('background-color', f);
         }
+        // Update display of color
+        var hsl = tinycolor(c).toHsl();
+        if (hsl.s != 0) {
+            this.picker.find('.colorhighlight').css({
+                left:    hsl.h,// * 360,
+                top:     Math.abs((hsl.l * 180) - 180),
+            }).show();
+            this.picker.find('.grayhighlight').css('display', 'none');
+        } else if(hsl.s==0) {
+            this.picker.find('.grayhighlight').css({
+                left:    hsl.l * 360,
+                top:     0,
+                display: 'block'
+            });
+            this.picker.find('.colorhighlight').hide();
+            console.log('hid colorhighlight', hsl);
+        }
+        this.picker.find('.alphahighlight').css({
+            left:    0,
+            top:     Math.abs((hsl.a * 180) - 180),
+            display: 'block'
+        });
+        this.picker.find('.actualcolor').val(f);
+        this.picker.find('.selectedcolor').css('background-color', f);
         if (typeof pickerInstance.opt.callback === 'function') {
             pickerInstance.opt.callback.call(pickerInstance, pickerInstance.element, f);
         }
     }
 
+    $.fn.colorpicker = function(opts) {
+        var returnValue = this;
+        var params = arguments;
+        $.each(this, function() {
+            var $this = $(this);
+            if (typeof opts === 'string') {
+                // send a command to existing
+                var picker = $this.data('rgbaColorPicker');
+                if (picker){
+                    switch(opts) {
+                        case 'show': picker.show(); break;
+                        case 'hide': picker.hide(); break;
+                        case 'set':  picker.setColor(params[1]); break;
+                        case 'get':  returnValue = picker.getColor(); return false; // break each loop
+                        default:
+                            throw new Error('Unknown command ' + opts + ' for rgbaColorPicker ' + $this.tagName + '#' + $this.attr('id') + '.' + this.className);
+                    }
+                } else {
+                    throw new Error('Calling command ' + opts + ' for un-initialized rgbaColorPicker ' + $this.tagName + '#' + $this.attr('id') + '.' + this.className);
+                }
+            } else if (typeof opts === 'object') {
+                var picker = new RGBA($this, opts);
+                $this.data('rgbaColorPicker', picker);
+            }
+        });
+        return returnValue;
+    };
     return RGBA;
 });
